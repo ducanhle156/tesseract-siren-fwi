@@ -1,0 +1,6 @@
+# Run outputs: figures, snapshots, result.npz, timing.txt, the code/ copy.
+results/
+results_*/
+
+__pycache__/
+*.py[cod]

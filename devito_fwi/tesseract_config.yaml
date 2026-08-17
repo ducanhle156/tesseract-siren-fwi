@@ -1,0 +1,29 @@
+name: "devito-fwi"
+version: "0.1.0"
+description: "Acoustic FWI: Vp -> L2 data misfit, with a hand-written adjoint-state VJP (Devito)."
+
+env:
+  # Devito JIT-compiles its stencils on first use and caches the shared
+  # objects; the default location is not writable in the served container.
+  DEVITO_LOGGING: "ERROR"
+  TMPDIR: "/tmp"
+  XDG_CACHE_HOME: "/tmp/.cache"
+  # One thread per worker: the pool already runs one process per shot.
+  OMP_NUM_THREADS: "1"
+  TQDM_DISABLE: "1"
+
+build_config:
+  target_platform: "native"
+
+  # Devito JIT-compiles the stencils at runtime, so the image needs a C
+  # compiler - unlike the SIREN side, which is pure Python wheels.
+  extra_packages:
+    - gcc
+    - g++
+
+  # devitofwi is not on PyPI, so it is vendored into the pipeline directory
+  # and copied into the image from there.
+  package_data:
+    - ["../problem_config.py", "problem_config.py"]
+    - ["../devitofwi", "devitofwi"]
+    - ["../data/Marm.bin", "data/Marm.bin"]

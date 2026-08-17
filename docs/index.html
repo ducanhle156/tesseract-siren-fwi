@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIREN-FWI as two composed Tesseracts</title>
+<meta name="description" content="Full-waveform inversion split across two Tesseracts: a JAX SIREN parameterisation and a Devito adjoint-state solver, composed into one differentiable pipeline.">
+<style>
+:root{
+  --bg:#0b0e14; --bg-2:#11151f; --panel:#141926; --line:#232a3b;
+  --fg:#e4e8f2; --fg-dim:#9aa5bd; --fg-mute:#6b7690;
+  --accent:#5fd3f3; --accent-2:#a78bfa; --warm:#f5a97f; --good:#88d498;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ---------- header ---------- */
+header{
+  border-bottom:1px solid var(--line);
+  background:
+    radial-gradient(1000px 400px at 15% -10%, rgba(95,211,243,.13), transparent 60%),
+    radial-gradient(800px 400px at 85% -20%, rgba(167,139,250,.11), transparent 60%),
+    var(--bg-2);
+}
+.hero{padding:76px 0 60px}
+.eyebrow{
+  font-family:var(--mono); font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--accent); margin:0 0 18px;
+}
+h1{
+  margin:0 0 18px; font-size:clamp(30px,5vw,46px); line-height:1.12;
+  letter-spacing:-.02em; font-weight:650;
+}
+.lede{font-size:clamp(16px,2.1vw,19px);color:var(--fg-dim);max-width:60ch;margin:0 0 28px}
+.lede strong{color:var(--fg);font-weight:600}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+.badge{
+  font-family:var(--mono);font-size:12px;padding:5px 11px;border-radius:999px;
+  border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--fg-dim);
+}
+.cta{display:flex;flex-wrap:wrap;gap:12px}
+.btn{
+  display:inline-block;padding:10px 18px;border-radius:8px;text-decoration:none;
+  font-size:14px;font-weight:560;border:1px solid var(--line);
+  color:var(--fg);background:rgba(255,255,255,.04);transition:.15s;
+}
+.btn:hover{background:rgba(255,255,255,.08);border-color:#39435c}
+.btn-primary{background:var(--accent);color:#06222c;border-color:transparent}
+.btn-primary:hover{background:#7fdff9;border-color:transparent}
+
+/* ---------- nav ---------- */
+nav{
+  position:sticky;top:0;z-index:20;background:rgba(11,14,20,.9);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+}
+nav .wrap{display:flex;gap:22px;overflow-x:auto;padding-top:13px;padding-bottom:13px}
+nav a{
+  color:var(--fg-mute);text-decoration:none;font-size:13.5px;white-space:nowrap;
+  font-family:var(--mono);transition:color .15s;
+}
+nav a:hover{color:var(--accent)}
+
+/* ---------- sections ---------- */
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+section:last-of-type{border-bottom:none}
+h2{
+  font-size:26px;margin:0 0 8px;letter-spacing:-.015em;font-weight:640;
+  scroll-margin-top:70px;
+}
+h3{font-size:17px;margin:32px 0 10px;color:var(--fg);font-weight:600}
+.sub{color:var(--fg-mute);font-size:14.5px;margin:0 0 26px}
+p{margin:0 0 16px;color:var(--fg-dim)}
+p strong{color:var(--fg);font-weight:600}
+a{color:var(--accent)}
+code{
+  font-family:var(--mono);font-size:.88em;background:rgba(255,255,255,.06);
+  padding:2px 6px;border-radius:4px;color:#c9d4ec;
+}
+pre{
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px 18px;overflow-x:auto;margin:0 0 20px;
+}
+pre code{background:none;padding:0;font-size:13px;line-height:1.7;color:#c9d4ec}
+.c-key{color:var(--accent-2)}.c-str{color:var(--good)}.c-com{color:var(--fg-mute);font-style:italic}
+ul{color:var(--fg-dim);padding-left:20px;margin:0 0 16px}
+li{margin-bottom:8px}
+
+/* ---------- diagram ---------- */
+.diagram{
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:26px 20px;margin:0 0 26px;overflow-x:auto;
+}
+.diagram svg{display:block;margin:0 auto;min-width:560px}
+
+/* ---------- table ---------- */
+.table-wrap{overflow-x:auto;margin:0 0 22px;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th,td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:rgba(255,255,255,.035);font-weight:600;color:var(--fg);font-size:12.5px;
+   text-transform:uppercase;letter-spacing:.05em}
+td{color:var(--fg-dim)}
+tr:last-child td{border-bottom:none}
+td code{font-size:12.5px}
+
+/* ---------- cards ---------- */
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-bottom:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.card h4{margin:0 0 8px;font-size:14px;color:var(--fg);font-weight:600}
+.card p{margin:0;font-size:13.5px;line-height:1.6}
+.stat{font-family:var(--mono);font-size:22px;color:var(--accent);margin:0 0 4px;font-weight:600}
+.stat-label{font-size:12.5px;color:var(--fg-mute);margin:0;line-height:1.5}
+
+/* ---------- figures ---------- */
+.figs{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;
+       padding:12px;overflow:hidden}
+figure img{width:100%;height:auto;display:block;border-radius:6px;background:#fff}
+figcaption{font-size:12.5px;color:var(--fg-mute);margin-top:10px;line-height:1.55}
+figcaption b{color:var(--fg-dim);font-weight:600}
+.fig-wide{grid-column:1/-1}
+
+/* ---------- callouts ---------- */
+.note{
+  border-left:3px solid var(--accent);background:rgba(95,211,243,.05);
+  padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 20px;
+}
+.note.warn{border-left-color:var(--warm);background:rgba(245,169,127,.05)}
+.note.good{border-left-color:var(--good);background:rgba(136,212,152,.05)}
+.note p{margin:0;font-size:14.5px}
+.note p+p{margin-top:10px}
+.note-title{font-weight:650;color:var(--fg);font-size:13px;text-transform:uppercase;
+            letter-spacing:.05em;display:block;margin-bottom:6px}
+
+/* ---------- footer ---------- */
+footer{padding:40px 0 60px;color:var(--fg-mute);font-size:13.5px}
+footer p{color:var(--fg-mute);font-size:13.5px}
+footer a{color:var(--fg-dim)}
+
+@media (max-width:640px){
+  .hero{padding:52px 0 42px}
+  section{padding:44px 0}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap hero">
+    <p class="eyebrow">Differentiable pipeline · Tesseract</p>
+    <h1>SIREN-FWI as two composed Tesseracts</h1>
+    <p class="lede">
+      Full-waveform inversion split at the boundary where the automatic-differentiation
+      strategy changes. A <strong>JAX</strong> coordinate network parameterises the velocity
+      model; a <strong>Devito</strong> finite-difference solver with a hand-written
+      adjoint-state gradient evaluates the data misfit. <code>jax.value_and_grad</code>
+      differentiates straight through both — across a process, or a container, boundary.
+    </p>
+    <div class="badges">
+      <span class="badge">Marmousi 601 × 221 @ 15 m</span>
+      <span class="badge">64 shots · 300 receivers</span>
+      <span class="badge">8 Hz Ricker</span>
+      <span class="badge">SIREN 256×4 · ω₀ = 20</span>
+      <span class="badge">198,401 weights</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary" href="#quickstart">Quick start</a>
+      <a class="btn" href="#architecture">Architecture</a>
+      <a class="btn" href="#results">Results</a>
+    </div>
+  </div>
+</header>
+
+<nav><div class="wrap">
+  <a href="#why">Why split</a>
+  <a href="#architecture">Architecture</a>
+  <a href="#quickstart">Quick start</a>
+  <a href="#problem">Problem</a>
+  <a href="#results">Results</a>
+  <a href="#gradient">Gradient check</a>
+  <a href="#containers">Containers</a>
+  <a href="#outputs">Outputs</a>
+  <a href="#notes">Notes</a>
+  <a href="#credits">Credits</a>
+</div></nav>
+
+<main class="wrap">
+
+<!-- ================= WHY ================= -->
+<section id="why">
+  <h2>Why the split is load-bearing</h2>
+  <p class="sub">It is not decoration — the two halves genuinely cannot share a dependency stack.</p>
+
+  <p>
+    <code>devito</code> and the newer <code>jax</code> live in different conda environments in this
+    workspace, and Devito's adjoint is <strong>not JAX-traceable</strong>: <code>jax.grad</code>
+    cannot cross that boundary on its own. Tesseract makes the boundary explicit and typed
+    instead of implicit in a <code>chain_grad</code> method call.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <p class="stat">2</p>
+      <p class="stat-label">independently implemented gradients, assembled by the chain rule across a process boundary</p>
+    </div>
+    <div class="card">
+      <p class="stat">1.49×</p>
+      <p class="stat-label">198,401 network weights against 132,821 grid unknowns — an overparameterised reparameterisation</p>
+    </div>
+    <div class="card">
+      <p class="stat">~50 s</p>
+      <p class="stat-label">one composed loss + gradient, 64 workers (one per shot) on an idle 64-core box</p>
+    </div>
+  </div>
+
+  <p>
+    Neither Tesseract knows the other exists. The workflow never sees a wavefield or a weight
+    matrix — only a flat <code>theta</code> vector going one way and a scalar loss coming back.
+  </p>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section id="architecture">
+  <h2>Architecture</h2>
+  <p class="sub">Forward along the top, vector–Jacobian products back along the bottom.</p>
+
+  <div class="diagram">
+    <svg viewBox="0 0 720 250" width="720" height="250" role="img"
+         aria-label="theta flows into the siren-model Tesseract producing Vp, which flows into the devito-fwi Tesseract producing the loss. Gradients flow back the other way: JAX VJP and adjoint VJP.">
+      <defs>
+        <marker id="fw" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 z" fill="#5fd3f3"/>
+        </marker>
+        <marker id="bw" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
+          <path d="M0,0 L8,3.2 L0,6.4 z" fill="#a78bfa"/>
+        </marker>
+      </defs>
+
+      <!-- forward arrows -->
+      <line x1="88"  y1="72" x2="184" y2="72" stroke="#5fd3f3" stroke-width="1.6" marker-end="url(#fw)"/>
+      <line x1="336" y1="72" x2="416" y2="72" stroke="#5fd3f3" stroke-width="1.6" marker-end="url(#fw)"/>
+      <line x1="568" y1="72" x2="648" y2="72" stroke="#5fd3f3" stroke-width="1.6" marker-end="url(#fw)"/>
+
+      <!-- theta -->
+      <text x="44" y="77" fill="#e4e8f2" font-family="ui-monospace,monospace" font-size="15" text-anchor="middle">θ</text>
+      <text x="44" y="96" fill="#6b7690" font-family="ui-monospace,monospace" font-size="10" text-anchor="middle">198,401</text>
+
+      <!-- siren box -->
+      <rect x="188" y="42" width="148" height="60" rx="9" fill="#141926" stroke="#5fd3f3" stroke-width="1.3"/>
+      <text x="262" y="66" fill="#5fd3f3" font-family="ui-monospace,monospace" font-size="12.5" text-anchor="middle">siren-model</text>
+      <text x="262" y="85" fill="#9aa5bd" font-family="ui-monospace,monospace" font-size="10" text-anchor="middle">jax · equinox</text>
+
+      <!-- vp -->
+      <text x="376" y="77" fill="#e4e8f2" font-family="ui-monospace,monospace" font-size="14" text-anchor="middle">Vp</text>
+      <text x="376" y="96" fill="#6b7690" font-family="ui-monospace,monospace" font-size="10" text-anchor="middle">601×221</text>
+
+      <!-- devito box -->
+      <rect x="420" y="42" width="148" height="60" rx="9" fill="#141926" stroke="#f5a97f" stroke-width="1.3"/>
+      <text x="494" y="66" fill="#f5a97f" font-family="ui-monospace,monospace" font-size="12.5" text-anchor="middle">devito-fwi</text>
+      <text x="494" y="85" fill="#9aa5bd" font-family="ui-monospace,monospace" font-size="10" text-anchor="middle">devito · pylops</text>
+
+      <!-- loss -->
+      <text x="676" y="77" fill="#e4e8f2" font-family="ui-monospace,monospace" font-size="14" text-anchor="middle">L</text>
+      <text x="676" y="96" fill="#6b7690" font-family="ui-monospace,monospace" font-size="10" text-anchor="middle">scalar</text>
+
+      <!-- backward arrows -->
+      <line x1="184" y1="146" x2="88"  y2="146" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#bw)"/>
+      <line x1="416" y1="146" x2="340" y2="146" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#bw)"/>
+      <line x1="648" y1="146" x2="572" y2="146" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#bw)"/>
+
+      <text x="262" y="140" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">JAX VJP</text>
+      <text x="262" y="158" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">autodiff</text>
+
+      <text x="494" y="140" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">adjoint VJP</text>
+      <text x="494" y="158" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">hand-written</text>
+
+      <text x="44"  y="150" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">dL/dθ</text>
+      <text x="376" y="150" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">dL/dVp</text>
+
+      <!-- chain rule -->
+      <line x1="44" y1="196" x2="676" y2="196" stroke="#232a3b" stroke-width="1"/>
+      <text x="360" y="222" fill="#9aa5bd" font-family="ui-monospace,monospace" font-size="13" text-anchor="middle">
+        dL/dθ  =  (dVp/dθ)ᵀ @ dL/dVp
+      </text>
+    </svg>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>siren_model/</th><th>devito_fwi/</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>forward</b></td>
+          <td><code>vp = vmin + (vmax−vmin)·σ(SIREN([x,z]))</code></td>
+          <td>acoustic FD solve, L2 misfit over all shots</td>
+        </tr>
+        <tr>
+          <td><b>gradient</b></td>
+          <td>JAX autodiff (<code>jax_recipes</code>)</td>
+          <td>discrete adjoint-state (<code>devitofwi</code>)</td>
+        </tr>
+        <tr>
+          <td><b>stack</b></td>
+          <td>jax, equinox</td>
+          <td>devito, pylops, a C compiler</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    <code>workflow.py</code> composes them and runs <code>jax.value_and_grad</code> plus Optax Adam
+    over <code>theta</code>. JAX never traces the wave solve — it calls the Devito Tesseract's
+    <code>vector_jacobian_product</code> endpoint, which is
+    <code>AcousticWave2D._loss_grad</code> used verbatim.
+  </p>
+
+  <h3>Why a coordinate network at all</h3>
+  <p>
+    The SIREN is a reparameterisation, not a regulariser bolted on afterwards. Velocity is a
+    continuous function of position, evaluated on the grid the solver needs; the sigmoid
+    bounds it into <code>[1.4, 5.8] km/s</code> by construction, so no clipping or projection
+    step is needed. The water layer is pinned <em>in the forward map</em>, not merely masked in
+    the gradient — every SIREN weight touches every grid node, so a zeroed grid gradient alone
+    would not stop the water from drifting.
+  </p>
+</section>
+
+<!-- ================= QUICKSTART ================= -->
+<section id="quickstart">
+  <h2>Quick start</h2>
+  <p class="sub">Fully self-contained — nothing outside this folder is read.</p>
+
+  <h3>Dependencies</h3>
+  <pre><code>devito==4.8.23  pylops  scipy  numpy  matplotlib  tqdm
+jax  optax  equinox
+tesseract-core[runtime]  tesseract-jax</code></pre>
+
+  <h3>Run</h3>
+  <pre><code><span class="c-com"># the env with devito; tesseract-core was installed into it</span>
+PY=/path/to/envs/geo_jxli/bin/python
+
+$PY workflow.py --benchmark     <span class="c-com"># time one loss+gradient and exit (~1 min)</span>
+$PY workflow.py --check-grad    <span class="c-com"># verify the composed gradient (~7 min)</span>
+$PY workflow.py                 <span class="c-com"># the full inversion</span></code></pre>
+
+  <p>Or through the <code>Makefile</code>, which is overridable per machine:</p>
+  <pre><code>make bench                 <span class="c-com"># one loss+gradient, ~1 min</span>
+make check-grad            <span class="c-com"># finite-difference the composed gradient</span>
+make test                  <span class="c-com"># 16 checks — budget ~20 min at this grid size</span>
+make run                   <span class="c-com"># the full inversion, reference defaults</span>
+make run PYTHON=python     <span class="c-com"># override the interpreter</span>
+make build TESSERACT=tesseract</code></pre>
+
+  <div class="note warn">
+    <span class="note-title">It is a long run</span>
+    <p>
+      One loss+gradient is ~50 s with one worker per shot on an idle 64-core machine (~3 min when
+      the box is busy), so 3000 epochs is on the order of <strong>two days</strong>. Start it detached
+      and watch <code>results/*tmp.png</code>, which refresh every <code>--fig-every</code> (25) epochs.
+      <code>--maxiter</code> cuts it short if you only want to see it move.
+    </p>
+  </div>
+
+  <pre><code>nohup $PY workflow.py > run.out 2>&1 &</code></pre>
+
+  <h3>Moving the folder</h3>
+  <p>
+    Copy it and run — no path editing needed. Every path is resolved from <code>__file__</code>,
+    not from the working directory:
+  </p>
+  <pre><code>cp -r tesseract_siren_fwi ~/anywhere/
+cd ~/anywhere/tesseract_siren_fwi && $PY workflow.py       <span class="c-com"># from inside</span>
+cd /somewhere/else && $PY ~/anywhere/tesseract_siren_fwi/workflow.py</code></pre>
+  <p>
+    The one machine-specific thing is the interpreter in the <code>Makefile</code>; it falls back to
+    whatever <code>python</code> / <code>tesseract</code> is on <code>PATH</code>.
+  </p>
+</section>
+
+<!-- ================= PROBLEM ================= -->
+<section id="problem">
+  <h2>The problem</h2>
+  <p class="sub">Exactly the reference script's configuration, unchanged.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Parameter</th><th>Value</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Model</td><td>Marmousi, 601 × 221</td><td>15 m grid, 9.0 × 3.3 km</td></tr>
+        <tr><td>Sources</td><td>64</td><td>spread over the full surface, 0.30 km edge margin</td></tr>
+        <tr><td>Receivers</td><td>300</td><td>full surface coverage</td></tr>
+        <tr><td>Record</td><td>3000 × 2 ms = 6 s</td><td>8 Hz Ricker source</td></tr>
+        <tr><td>Space order</td><td>4</td><td><code>nbl = 20</code> absorbing cells</td></tr>
+        <tr><td>SIREN</td><td>256 × 4 hidden, ω₀ = 20</td><td>198,401 weights, seed 0</td></tr>
+        <tr><td>Bounds</td><td>1.4 – 5.8 km/s</td><td>brackets Marmousi's 1.484 – 5.695</td></tr>
+        <tr><td>Optimiser</td><td>Adam, lr 1.5e-4</td><td>3000 epochs, 50 warmup steps</td></tr>
+        <tr><td>Water layer</td><td><code>vp &gt; 1.52</code></td><td>masked cells pinned to 1.5 km/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="note-title">On the velocity bounds</span>
+    <p>
+      The reference script takes <code>vmin</code>/<code>vmax</code> from
+      <code>vp_true.min()/max()</code> — knowledge of the answer. Here they are stated as
+      constants instead, which keeps the model Tesseract from loading the true model at all.
+      The bounds only have to <em>contain</em> the model; a real inversion would set them wider,
+      from expected geology. They must not be tighter than the truth — a sigmoid saturating
+      inside the true range could never reach the extremes.
+    </p>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section id="results">
+  <h2>Results</h2>
+  <p class="sub">Figures from a live run at the full 601 × 221 configuration.</p>
+
+  <div class="figs">
+    <figure class="fig-wide">
+      <img src="assets/SirenInit.jpg" alt="True Marmousi velocity model beside the random SIREN initial model" loading="lazy">
+      <figcaption><b>SirenInit.png</b> — the true Marmousi model and the random SIREN initialisation the inversion starts from. The starting model sits at RMSE 1.057 km/s.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
+      <img src="assets/Data.jpg" alt="Observed shot gathers" loading="lazy">
+      <figcaption><b>Data.png</b> — observed shot gathers, generated in ~11 s across 64 workers.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
+      <img src="assets/Gradient.jpg" alt="First gradient with respect to Vp" loading="lazy">
+      <figcaption><b>Gradient.png</b> — the first gradient w.r.t. Vp, returned by the Devito Tesseract's adjoint-state VJP and about to be chained back through the SIREN.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/InvertedVP.jpg" alt="True, initial and inverted velocity models" loading="lazy">
+      <figcaption><b>InvertedVPtmp.png</b> — true / random-initial / current model on one shared colorbar, refreshed live during the run.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/Loss.jpg" alt="Convergence curves" loading="lazy">
+      <figcaption><b>Losstmp.png</b> — data misfit and model error against epoch.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/GradTheta.jpg" alt="Per-layer gradient norms" loading="lazy">
+      <figcaption><b>GradThetatmp.png</b> — ‖dL/dθ‖ per SIREN layer and its history, the composed gradient after both VJPs.</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/Waveform.jpg" alt="Observed versus modelled waveforms" loading="lazy">
+      <figcaption><b>Waveformtmp.png</b> — observed vs modelled wiggles and their residual, live.</figcaption>
+    </figure>
+  </div>
+
+  <h3>What has and has not been verified</h3>
+
+  <div class="note good">
+    <span class="note-title">Verified at this scale</span>
+    <p>
+      The pipeline starts and runs — 64 workers, one per shot; observed data in ~11 s; one
+      composed loss+gradient in ~50 s giving <code>loss 1.331e-05</code> and
+      <code>|dL/dθ| 8.93e-05</code>, over 198,401 weights against 132,821 grid unknowns (1.49×).
+    </p>
+  </div>
+
+  <div class="note">
+    <span class="note-title">Verified on a cheaper grid</span>
+    <p>
+      All 16 checks in <code>test_pipeline.py</code> on a decimated Marmousi used during
+      development: the composed gradient against finite differences to ~1%, the Devito adjoint
+      to 2e-5 – 4e-4 per cell, and the fully containerised <code>--served</code> path returning
+      an identical gradient. Those are properties of the code, not of the grid — but they have
+      not been re-run at full size, where <code>make test</code> costs a wave solve per check.
+    </p>
+  </div>
+
+  <div class="note warn">
+    <span class="note-title">Not verified — convergence</span>
+    <p>
+      No full 3000-epoch run has been completed. On the cheaper grid the misfit fell
+      monotonically while the model RMSE <em>rose</em> after a few iterations — cycle-skipping
+      from a random start, expected with no multiscale continuation, and exactly the regime the
+      reference script's 64 shots and thousands of epochs exist to escape.
+    </p>
+    <p>
+      Whether this configuration recovers Marmousi is an open question here; the reference
+      script's own results are the yardstick.
+    </p>
+  </div>
+</section>
+
+<!-- ================= GRADIENT ================= -->
+<section id="gradient">
+  <h2>Verifying the composed gradient</h2>
+  <p class="sub">The check that both VJPs are correct <em>and</em> consistent with each other.</p>
+
+  <p>
+    <code>--check-grad</code> finite-differences the <strong>composed</strong> forward map and
+    compares it against the composed adjoint. It only passes if both halves are right:
+  </p>
+
+  <pre><code>-grad: adjoint +3.081590e-05  finite-diff +3.115019e-05  rel.err 1.07e-02  OK</code></pre>
+
+  <p>
+    The assertion is on the <strong>gradient direction</strong> — the one Adam steps along, and the
+    best conditioned. Random directions in 8577-dimensional space are nearly orthogonal to the
+    gradient (they see ~1% of its norm), so their finite differences are dominated by
+    second-order terms of the other components; they are printed for information but not
+    asserted on. Verified separately, single-cell perturbations of the Devito VJP agree to
+    2e-5 – 4e-4.
+  </p>
+
+  <div class="note warn">
+    <span class="note-title">A factor-of-two fix</span>
+    <p>
+      <code>PostProcessVP</code> carries one local change relative to Devito-fwi upstream:
+      <code>−grad/vp³</code> → <code>−2·grad/vp³</code>. Devito returns
+      <code>dL/dm</code> for the squared slowness <code>m = 1/vp²</code>, so the chain rule to
+      velocity is <code>dL/dm · (−2/vp³)</code> — the factor of 2 belongs there. The gradient
+      check depends on it: with the upstream expression the adjoint is off by exactly 2×.
+      Worth sending upstream.
+    </p>
+  </div>
+</section>
+
+<!-- ================= CONTAINERS ================= -->
+<section id="containers">
+  <h2>Running as containers</h2>
+  <p class="sub">The in-process mode keeps the demo to one command; container mode is what actually delivers the isolation.</p>
+
+  <pre><code>make build                     <span class="c-com"># or: tesseract build siren_model/ && ... devito_fwi/</span>
+tesseract serve siren-model    <span class="c-com"># note the port</span>
+tesseract serve devito-fwi     <span class="c-com"># note this one too</span>
+$PY workflow.py --served http://127.0.0.1:PORT1 http://127.0.0.1:PORT2
+tesseract teardown &lt;name&gt;      <span class="c-com"># names printed by serve, or `tesseract ps`</span></code></pre>
+
+  <p>
+    <code>workflow.py</code> is <strong>unchanged</strong> between the two modes — only how the
+    clients are constructed differs, which is the point of the abstraction.
+  </p>
+
+  <div class="note">
+    <span class="note-title">Podman without docker</span>
+    <p>
+      The Tesseract CLI shells out to <code>docker</code>. On a box with rootless podman and no
+      <code>docker</code> binary, builds need a shim — the <code>Makefile</code> puts
+      <code>~/.local/bin</code> on <code>PATH</code> for the build targets:
+    </p>
+    <pre style="margin:10px 0 0"><code>printf '#!/bin/sh\nexec podman "$@"\n' > ~/.local/bin/docker && chmod +x ~/.local/bin/docker</code></pre>
+  </div>
+</section>
+
+<!-- ================= OUTPUTS ================= -->
+<section id="outputs">
+  <h2>Outputs</h2>
+  <p class="sub">The same file set, figures and timing report as the monolithic reference script — only the gradient path differs, which makes the two directly comparable.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>File</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><code>SirenInit.png</code></td><td>true model + random initial model</td></tr>
+        <tr><td><code>Data.png</code></td><td>observed shot gathers</td></tr>
+        <tr><td><code>Gradient.png</code></td><td>first gradient w.r.t. Vp</td></tr>
+        <tr><td><code>InvertedVP.png</code></td><td>true / random-initial / inverted, one shared colorbar</td></tr>
+        <tr><td><code>Profiles.png</code></td><td>vertical Vp profiles at three distances</td></tr>
+        <tr><td><code>Waveform.png</code></td><td>observed vs modelled waveforms</td></tr>
+        <tr><td><code>Loss.png</code></td><td>convergence — data misfit + model error</td></tr>
+        <tr><td><code>GradTheta.png</code></td><td>dL/dθ per layer at the final model, and its history</td></tr>
+        <tr><td><code>*tmp.png</code></td><td>live diagnostics, refreshed every <code>--fig-every</code></td></tr>
+        <tr><td><code>snapshots.npy</code></td><td>movie frames</td></tr>
+        <tr><td><code>result.npz</code></td><td>models, weights, histories, timings</td></tr>
+        <tr><td><code>timing.txt</code></td><td>the timing report printed at the end</td></tr>
+        <tr><td><code>code/</code></td><td>verbatim copy of the sources that produced the run</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    Throttles: <code>--fig-every</code> (live figures), <code>--wiggle-every</code> /
+    <code>--wiggle-shot</code> / <code>--wiggle-tmax</code> (live waveforms),
+    <code>--snap-every</code> (movie frames), <code>--no-figures</code> to skip all of it.
+  </p>
+</section>
+
+<!-- ================= NOTES ================= -->
+<section id="notes">
+  <h2>Implementation notes</h2>
+  <p class="sub">The things that were not obvious.</p>
+
+  <div class="grid">
+    <div class="card">
+      <h4>JAX_PLATFORMS=cpu</h4>
+      <p>Set inside <code>siren_model/tesseract_api.py</code>. The coordinate network is a few
+      thousand weights — a GPU buys nothing, costs a transfer per call, and on a shared box
+      competes with whatever else is resident.</p>
+    </div>
+    <div class="card">
+      <h4>jax_enable_x64</h4>
+      <p>Enabled in the workflow: the FWI Tesseract returns a float64 loss.</p>
+    </div>
+    <div class="card">
+      <h4>The pool is warmed once</h4>
+      <p><code>devito_fwi</code> forks one worker per shot on the first call and reuses them, so
+      Devito's JIT compilation and the observed-data modelling are paid once per served
+      Tesseract rather than once per gradient.</p>
+    </div>
+    <div class="card">
+      <h4>apply computes the gradient anyway</h4>
+      <p><code>_loss_grad(computegrad=False)</code> has an upstream bug — it crops an unbound
+      <code>grad</code> — so the loss-only shortcut is unusable. The forward solve dominates, so
+      the wasted adjoint is a modest cost rather than a doubling.</p>
+    </div>
+    <div class="card">
+      <h4>Two implicit devito dependencies</h4>
+      <p><code>matplotlib</code> (imported at module level by <code>waveengine/acoustic.py</code>)
+      and <code>pytest</code> (devito 4.8.23's bundled <code>examples/seismic/model.py</code> carries
+      a module-level <code>@pytest.mark.parametrize</code>, making it an <em>import-time</em>
+      dependency). A missing one kills the forked workers.</p>
+    </div>
+    <div class="card">
+      <h4>theta crosses flat</h4>
+      <p>The ravelled pytree goes over the boundary as a single float32 vector, so the schema is
+      one array rather than a nested list of per-layer matrices. The unravel function is rebuilt
+      from the architecture each call — cheap, and it keeps the Tesseract stateless.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CREDITS ================= -->
+<section id="credits">
+  <h2>Credits</h2>
+  <p class="sub">The FWI engine is not mine.</p>
+
+  <p>
+    <code>devitofwi/</code> is
+    <a href="https://github.com/DIG-Kaust/Devito-fwi">Devito-fwi</a> by the
+    <strong>Deep Imaging Group at KAUST</strong> (lead author Matteo Ravasi), MIT licensed,
+    vendored here with its <code>LICENSE</code>. Its Devito propagator and hand-written
+    adjoint-state gradient <em>are</em> the physics Tesseract —
+    <code>AcousticWave2D._loss_grad</code> is called verbatim as the
+    <code>vector_jacobian_product</code>; the Tesseract only puts a typed boundary around it.
+  </p>
+
+  <p>
+    <code>siren/</code> is adapted from
+    <a href="https://github.com/nguyenvanhaibk92/KronosAI_solutions">KronosAI_solutions</a>
+    (SIREN, Sitzmann et al. 2020). Full attribution, licences and the one local modification to
+    Devito-fwi are in <code>THIRD_PARTY.md</code>.
+  </p>
+
+  <p>
+    Vendored rather than pip-installed because Devito-fwi is not on PyPI, and in this workspace
+    it was an editable install pointing back at a parent repo — which would have made this
+    folder non-portable.
+  </p>
+</section>
+
+</main>
+
+<footer><div class="wrap">
+  <p>
+    Built on <a href="https://github.com/pasteurlabs/tesseract-core">Tesseract</a>,
+    <a href="https://www.devitoproject.org/">Devito</a> and
+    <a href="https://github.com/jax-ml/jax">JAX</a>.
+    Third-party code is MIT licensed and attributed in <code>THIRD_PARTY.md</code>.
+  </p>
+</div></footer>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+name: "siren-model"
+version: "0.1.0"
+description: "SIREN parameterisation of a velocity model: theta -> Vp, with JAX autodiff gradients."
+
+build_config:
+  target_platform: "native"
+
+  # problem_config.py, the siren package and the velocity model live one level up, in
+  # the pipeline directory; copy them in next to tesseract_api.py so the
+  # container sees the same layout as a local run.
+  package_data:
+    - ["../problem_config.py", "problem_config.py"]
+    - ["../siren", "siren"]
+    - ["../data/Marm.bin", "data/Marm.bin"]

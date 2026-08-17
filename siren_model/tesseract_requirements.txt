@@ -1,0 +1,4 @@
+jax[cpu]
+equinox
+optax
+numpy

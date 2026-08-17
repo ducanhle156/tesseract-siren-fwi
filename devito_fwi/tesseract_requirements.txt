@@ -1,0 +1,14 @@
+devito==4.8.23
+pylops
+numpy
+scipy
+# devitofwi/waveengine/acoustic.py imports pyplot at module level, so the
+# container needs matplotlib even though this Tesseract draws nothing.
+matplotlib
+# devitofwi imports devito's bundled `examples.seismic`, whose model.py carries
+# a module-level @pytest.mark.parametrize - so pytest is an import-time
+# dependency of devito 4.8.23, not just a test one.
+pytest
+# devitofwi wraps its shot loop in tqdm (disabled at runtime via TQDM_DISABLE,
+# but still imported).
+tqdm
