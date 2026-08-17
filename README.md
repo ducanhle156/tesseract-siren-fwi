@@ -1,6 +1,6 @@
 # SIREN-FWI as two composed Tesseracts
 
-> 📄 **Project page with figures: [nhattranmt.github.io/tesseract-siren-fwi](https://nhattranmt.github.io/tesseract-siren-fwi/)**
+> 📄 **Project page with figures: [nhatminhtrange.github.io/tesseract-siren-fwi](https://nhatminhtrange.github.io/tesseract-siren-fwi/)**
 > — the same material as this README, with the run's figures inline. Source in [`docs/`](docs/).
 
 A minimal version of `script_siren_Nhat/AcousticVel_L2_SIREN_random.py`, split
