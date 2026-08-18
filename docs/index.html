@@ -469,10 +469,9 @@ footer a{color:var(--fg-dim)}
       not at a convergence criterion.
     </p>
     <p>
-      The <strong>correctness checks</strong> (16 in <code>test_pipeline.py</code>: composed gradient
-      vs finite differences to ~1 %, the Devito adjoint to 2e-5 – 4e-4 per cell, the containerised
-      path returning an identical gradient) were run on a cheaper decimated grid. They are
-      properties of the code, not the grid, but have not been re-run at full size.
+      The <strong>correctness checks</strong> — 16 of them, including the
+      <a href="#gradient">gradient check</a> — were run on a cheaper decimated grid, not at this
+      size.
     </p>
   </div>
 
@@ -484,11 +483,26 @@ footer a{color:var(--fg-dim)}
   <p class="sub">The check that both VJPs are correct <em>and</em> consistent with each other.</p>
 
   <p>
-    <code>--check-grad</code> finite-differences the <strong>composed</strong> forward map against
-    the composed adjoint. It only passes if both halves are right:
+    <code>workflow.py --check-grad</code> perturbs <code>theta</code> along the gradient direction,
+    re-runs the <strong>whole</strong> pipeline either side, and compares that slope against the
+    composed adjoint. It passes only if both VJPs are right <em>and</em> agree with each other —
+    a bug in either half breaks it. The tolerance is 3 %:
   </p>
 
   <pre><code>-grad: adjoint +3.081590e-05  finite-diff +3.115019e-05  rel.err 1.07e-02  OK</code></pre>
+
+  <p>
+    <code>test_pipeline.py</code> checks the two halves separately as well — the JAX VJP to 1 %,
+    and the Devito adjoint against single-cell finite differences to 5e-3.
+  </p>
+
+  <div class="note">
+    <p>
+      These numbers come from the <strong>decimated development grid</strong>, not from the
+      601 × 221 run — at full size each check costs a wave solve. They test the code, which does
+      not change with the grid, but they have not been re-run here.
+    </p>
+  </div>
 
   <div class="note warn">
     <span class="note-title">A factor-of-two fix</span>
