@@ -212,8 +212,8 @@ footer a{color:var(--fg-dim)}
       <p class="stat-label">independently written gradients, joined by the chain rule across a process boundary</p>
     </div>
     <div class="card">
-      <p class="stat">1.49×</p>
-      <p class="stat-label">198,401 network weights against 132,821 grid unknowns</p>
+      <p class="stat">1.66×</p>
+      <p class="stat-label">198,401 network weights against 119,361 unpinned grid cells — the optimiser steps the weights, not the cells</p>
     </div>
     <div class="card">
       <p class="stat">7.80 s</p>
@@ -331,9 +331,12 @@ footer a{color:var(--fg-dim)}
   </p>
 
   <p>
-    The SIREN is a <strong>reparameterisation</strong>, not a regulariser: velocity becomes a
-    continuous function of position, and the sigmoid bounds it into
-    <code>[1.4, 5.8] km/s</code> by construction, so nothing needs clipping.
+    The SIREN is a <strong>reparameterisation</strong>, not a regulariser. It maps a coordinate
+    <code>(x, z)</code> to the velocity there — 2 inputs, 1 output, four hidden layers of 256,
+    so <strong>198,401 weights</strong> — and the whole model is that network evaluated on all
+    601 × 221 grid points. The optimiser therefore steps the <em>weights</em>, never the cells
+    directly, and the sigmoid bounds the output into <code>[1.4, 5.8] km/s</code> by
+    construction, so nothing needs clipping.
   </p>
 </section>
 
