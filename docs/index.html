@@ -173,9 +173,8 @@ footer a{color:var(--fg-dim)}
       <span class="badge">✓ Marmousi recovered from random</span>
     </div>
     <div class="cta">
-      <a class="btn btn-primary" href="#quickstart">Quick start</a>
+      <a class="btn btn-primary" href="#results">Results</a>
       <a class="btn" href="#architecture">Architecture</a>
-      <a class="btn" href="#results">Results</a>
     </div>
   </div>
 </header>
@@ -183,7 +182,6 @@ footer a{color:var(--fg-dim)}
 <nav><div class="wrap">
   <a href="#why">Why split</a>
   <a href="#architecture">Architecture</a>
-  <a href="#quickstart">Quick start</a>
   <a href="#problem">Problem</a>
   <a href="#results">Results</a>
   <a href="#gradient">Gradient check</a>
@@ -335,59 +333,6 @@ footer a{color:var(--fg-dim)}
   </p>
 </section>
 
-<!-- ================= QUICKSTART ================= -->
-<section id="quickstart">
-  <h2>Quick start</h2>
-  <p class="sub">Fully self-contained — nothing outside this folder is read.</p>
-
-  <h3>Dependencies</h3>
-  <pre><code>devito==4.8.23  pylops  scipy  numpy  matplotlib  tqdm
-jax  optax  equinox
-tesseract-core[runtime]  tesseract-jax</code></pre>
-
-  <h3>Run</h3>
-  <pre><code><span class="c-com"># the env with devito; tesseract-core was installed into it</span>
-PY=/path/to/envs/geo_jxli/bin/python
-
-$PY workflow.py --benchmark     <span class="c-com"># time one loss+gradient and exit (~1 min)</span>
-$PY workflow.py --check-grad    <span class="c-com"># verify the composed gradient (~7 min)</span>
-$PY workflow.py                 <span class="c-com"># the full inversion</span></code></pre>
-
-  <p>Or through the <code>Makefile</code>, which is overridable per machine:</p>
-  <pre><code>make bench                 <span class="c-com"># one loss+gradient, ~1 min</span>
-make check-grad            <span class="c-com"># finite-difference the composed gradient</span>
-make test                  <span class="c-com"># 16 checks — budget ~20 min at this grid size</span>
-make run                   <span class="c-com"># the full inversion, reference defaults</span>
-make run PYTHON=python     <span class="c-com"># override the interpreter</span>
-make build TESSERACT=tesseract</code></pre>
-
-  <div class="note warn">
-    <span class="note-title">It is a long run</span>
-    <p>
-      One loss+gradient averaged <strong>7.8 s</strong> with one worker per shot over the completed
-      run, so 6000 epochs took <strong>13 h 53 m</strong>. On a busy box it is several times that.
-      Start it detached and watch <code>results/*tmp.png</code>, which refresh every
-      <code>--fig-every</code> (25) epochs. <code>--maxiter</code> cuts it short if you only want
-      to see it move.
-    </p>
-  </div>
-
-  <pre><code>nohup $PY workflow.py > run.out 2>&1 &</code></pre>
-
-  <h3>Moving the folder</h3>
-  <p>
-    Copy it and run — no path editing needed. Every path is resolved from <code>__file__</code>,
-    not from the working directory:
-  </p>
-  <pre><code>cp -r tesseract_siren_fwi ~/anywhere/
-cd ~/anywhere/tesseract_siren_fwi && $PY workflow.py       <span class="c-com"># from inside</span>
-cd /somewhere/else && $PY ~/anywhere/tesseract_siren_fwi/workflow.py</code></pre>
-  <p>
-    The one machine-specific thing is the interpreter in the <code>Makefile</code>; it falls back to
-    whatever <code>python</code> / <code>tesseract</code> is on <code>PATH</code>.
-  </p>
-</section>
-
 <!-- ================= PROBLEM ================= -->
 <section id="problem">
   <h2>The problem</h2>
@@ -493,10 +438,6 @@ cd /somewhere/else && $PY ~/anywhere/tesseract_siren_fwi/workflow.py</code></pre
       <figcaption><b>Gradient.png</b> — the first gradient w.r.t. Vp from the Devito Tesseract's adjoint-state VJP, about to be chained back through the SIREN.</figcaption>
     </figure>
 
-    <figure>
-      <img src="assets/GradTheta.jpg" alt="Per-layer gradient norms" loading="lazy">
-      <figcaption><b>GradTheta.png</b> — ‖dL/dθ‖ per SIREN layer and its history: the composed gradient, after both VJPs.</figcaption>
-    </figure>
   </div>
 
   <h3>Where the time went</h3>
@@ -727,6 +668,10 @@ tesseract teardown &lt;name&gt;      <span class="c-com"># names printed by serv
 </main>
 
 <footer><div class="wrap">
+  <p>
+    Source, dependencies and instructions for running it:
+    <a href="https://github.com/nhatminhtrange/tesseract-siren-fwi">github.com/nhatminhtrange/tesseract-siren-fwi</a>.
+  </p>
   <p>
     Built on <a href="https://github.com/pasteurlabs/tesseract-core">Tesseract</a>,
     <a href="https://www.devitoproject.org/">Devito</a> and
