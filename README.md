@@ -147,9 +147,9 @@ The problem is the reference script's, unchanged: Marmousi on **601×221 at
 15 m, 64 shots, 300 receivers, 8 Hz**, SIREN **256×4** at omega_0 20, Adam at
 **1.5e-4 for 3000 epochs** with 50 warmup steps. `make run` is exactly that.
 
-**It is a long run.** One loss+gradient is ~50 s with one worker per shot on an
-idle 64-core machine (~3 min when the box is busy), so 3000 epochs is on the
-order of two days. Start it detached:
+**It is a long run.** One loss+gradient averaged 7.8 s with one worker per shot
+over the completed run, so 6000 epochs took ~14 hours; on a busy box it is
+several times that. Start it detached:
 
 ```bash
 nohup $PY workflow.py > run.out 2>&1 &
@@ -189,27 +189,38 @@ Throttles: `--fig-every` (live figures), `--wiggle-every` / `--wiggle-shot` /
 `--wiggle-tmax` (live waveforms), `--snap-every` (movie frames),
 `--no-figures` to skip all of it.
 
-### What has and has not been verified
+### Results — a completed run
 
-**Verified at this scale**: the pipeline starts and runs — 64 workers, one per
-shot; observed data in ~11 s; one composed loss+gradient in ~50 s giving
-`loss 1.331e-05` and `|dL/dθ| 8.93e-05`, over 198,401 weights against 132,821
-grid unknowns (1.49×). The starting model sits at RMSE 1.057 km/s.
+**Marmousi is recovered from a featureless random start**, with no multiscale
+continuation and no starting-model information. 6000 Adam epochs, 13 h 53 m
+wall clock:
 
-**Verified on a cheaper grid** (a decimated Marmousi used during development,
-now removed): all 16 checks in `test_pipeline.py`, including the composed
+| | initial | final |
+|---|---|---|
+| data misfit Φ | 1.3799e+04 | 4.0559e+01 — **0.29 % of initial** |
+| model error ‖(m−m_true)/m_true‖₂ | 177.43 | 33.00 — **81.4 % reduction** |
+| velocity RMSE | 1.0014 km/s | **0.3600 km/s** — 64 % reduction |
+
+Both curves fall together, which is the point — the misfit is not being reduced
+at the model's expense. See `Loss.png` and `InvertedVP.png`; the faults, the
+dipping high-velocity wedge and the layer geometry are all recovered.
+
+Timing: 93.7 % of wall clock is the objective (loss + gradient + VJP), 7.80 s
+mean over 6000 calls with 50 workers. The Tesseract boundary itself — `theta`
+out and `dL/dθ` back, 6000 times each way — does not show up in the budget.
+
+**Caveats.** This run used **50 shots and 6000 epochs**, not the 64 / 3000 that
+`make run` and the reference script use, and started from a calibrated random
+SIREN (gain 8.775, σ 0.300 km/s). It had largely plateaued — over the final 500
+epochs the misfit moved 7 % and the model error 0.58 % — and was stopped at its
+epoch budget, not at a convergence criterion.
+
+**Correctness checks were run on a cheaper grid** (a decimated Marmousi used
+during development): all 16 checks in `test_pipeline.py`, including the composed
 gradient against finite differences to ~1%, the Devito adjoint to 2e-5–4e-4 per
 cell, and the fully containerised `--served` path returning an identical
 gradient. Those are properties of the code, not of the grid, but they have not
-been re-run here — `make test` at this size costs a wave solve per check.
-
-**Not verified**: convergence. No full 3000-epoch run has been completed. On
-the cheaper grid the misfit fell monotonically while the model RMSE rose after
-a few iterations — cycle-skipping from a random start, expected with no
-multiscale continuation, and exactly the regime the reference script's 64 shots
-and thousands of epochs exist to escape. Whether this configuration recovers
-Marmousi is an open question here; the reference script's own results are the
-yardstick.
+been re-run at full size — `make test` there costs a wave solve per check.
 
 ## Verifying the gradient
 

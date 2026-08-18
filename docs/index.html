@@ -162,13 +162,15 @@ footer a{color:var(--fg-dim)}
       model; a <strong>Devito</strong> finite-difference solver with a hand-written
       adjoint-state gradient evaluates the data misfit. <code>jax.value_and_grad</code>
       differentiates straight through both — across a process, or a container, boundary.
+      A completed 6000-epoch run <a href="#results">recovers Marmousi</a> from a featureless
+      random start.
     </p>
     <div class="badges">
       <span class="badge">Marmousi 601 × 221 @ 15 m</span>
-      <span class="badge">64 shots · 300 receivers</span>
       <span class="badge">8 Hz Ricker</span>
       <span class="badge">SIREN 256×4 · ω₀ = 20</span>
       <span class="badge">198,401 weights</span>
+      <span class="badge">✓ Marmousi recovered from random</span>
     </div>
     <div class="cta">
       <a class="btn btn-primary" href="#quickstart">Quick start</a>
@@ -215,8 +217,8 @@ footer a{color:var(--fg-dim)}
       <p class="stat-label">198,401 network weights against 132,821 grid unknowns — an overparameterised reparameterisation</p>
     </div>
     <div class="card">
-      <p class="stat">~50 s</p>
-      <p class="stat-label">one composed loss + gradient, 64 workers (one per shot) on an idle 64-core box</p>
+      <p class="stat">7.80 s</p>
+      <p class="stat-label">mean per composed loss + gradient over 6000 epochs, one worker per shot</p>
     </div>
   </div>
 
@@ -362,10 +364,11 @@ make build TESSERACT=tesseract</code></pre>
   <div class="note warn">
     <span class="note-title">It is a long run</span>
     <p>
-      One loss+gradient is ~50 s with one worker per shot on an idle 64-core machine (~3 min when
-      the box is busy), so 3000 epochs is on the order of <strong>two days</strong>. Start it detached
-      and watch <code>results/*tmp.png</code>, which refresh every <code>--fig-every</code> (25) epochs.
-      <code>--maxiter</code> cuts it short if you only want to see it move.
+      One loss+gradient averaged <strong>7.8 s</strong> with one worker per shot over the completed
+      run, so 6000 epochs took <strong>13 h 53 m</strong>. On a busy box it is several times that.
+      Start it detached and watch <code>results/*tmp.png</code>, which refresh every
+      <code>--fig-every</code> (25) epochs. <code>--maxiter</code> cuts it short if you only want
+      to see it move.
     </p>
   </div>
 
@@ -388,7 +391,7 @@ cd /somewhere/else && $PY ~/anywhere/tesseract_siren_fwi/workflow.py</code></pre
 <!-- ================= PROBLEM ================= -->
 <section id="problem">
   <h2>The problem</h2>
-  <p class="sub">Exactly the reference script's configuration, unchanged.</p>
+  <p class="sub">The repo defaults, which are exactly the reference script's configuration. The completed run in <a href="#results">Results</a> varies two of them — 50 shots and 6000 epochs — and says so.</p>
 
   <div class="table-wrap">
     <table>
@@ -425,76 +428,131 @@ cd /somewhere/else && $PY ~/anywhere/tesseract_siren_fwi/workflow.py</code></pre
   <h2>Results</h2>
   <p class="sub">Figures from a live run at the full 601 × 221 configuration.</p>
 
+  <div class="note good">
+    <span class="note-title">A completed run — 6000 epochs, 13 h 53 m</span>
+    <p>
+      Marmousi is <strong>recovered from a featureless random start</strong>, with no multiscale
+      continuation and no starting-model information. Data misfit fell to
+      <strong>0.29 %</strong> of its initial value and model error by <strong>81.4 %</strong>;
+      velocity RMSE went from <strong>1.0014 → 0.3600 km/s</strong> (64 % reduction).
+    </p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <p class="stat">0.29 %</p>
+      <p class="stat-label">final data misfit Φ/Φ₀ — 1.3799e+04 → 4.0559e+01</p>
+    </div>
+    <div class="card">
+      <p class="stat">0.360</p>
+      <p class="stat-label">km/s final velocity RMSE, from 1.0014 at the random start</p>
+    </div>
+    <div class="card">
+      <p class="stat">81.4 %</p>
+      <p class="stat-label">model-error reduction, ‖(m − m_true)/m_true‖₂: 177.4 → 33.0</p>
+    </div>
+    <div class="card">
+      <p class="stat">7.80 s</p>
+      <p class="stat-label">mean per composed loss + gradient + VJP, n = 6000, 50 workers</p>
+    </div>
+  </div>
+
   <div class="figs">
     <figure class="fig-wide">
+      <img src="assets/InvertedVP.jpg" alt="True Marmousi model, random SIREN start, and the inverted model on a shared colorbar" loading="lazy">
+      <figcaption><b>InvertedVP.png</b> — the result. True model (a), the random SIREN start it began from (b), and the inverted model (c), on one shared colorbar. The faults, the dipping high-velocity wedge and the layer geometry are all recovered; (b) shows how little was there to begin with.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
+      <img src="assets/Loss.jpg" alt="Data misfit and model error against epoch" loading="lazy">
+      <figcaption><b>Loss.png</b> — data misfit (left, log scale) and model error (right). <b>Both fall together</b>, which is the point: the misfit is not being reduced at the model's expense. The spike near epoch 2724 is a single bad Adam step — the misfit recovers in 2 epochs, the model error in 390.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
+      <img src="assets/Profiles.jpg" alt="Vertical velocity profiles at three distances" loading="lazy">
+      <figcaption><b>Profiles.png</b> — vertical Vp profiles at three distances, the sharpest test of the result: inverted against true, trace by trace.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
+      <img src="assets/Waveform.jpg" alt="Observed versus modelled waveforms and residual" loading="lazy">
+      <figcaption><b>Waveform.png</b> — observed vs modelled wiggles and their residual at the final model.</figcaption>
+    </figure>
+
+    <figure class="fig-wide">
       <img src="assets/SirenInit.jpg" alt="True Marmousi velocity model beside the random SIREN initial model" loading="lazy">
-      <figcaption><b>SirenInit.png</b> — the true Marmousi model and the random SIREN initialisation the inversion starts from. The starting model sits at RMSE 1.057 km/s.</figcaption>
+      <figcaption><b>SirenInit.png</b> — the true model and the random SIREN initialisation (random phase, gain 8.775, seed 0, σ = 0.300 km/s), at RMSE 1.0014 km/s.</figcaption>
     </figure>
 
-    <figure class="fig-wide">
+    <figure>
       <img src="assets/Data.jpg" alt="Observed shot gathers" loading="lazy">
-      <figcaption><b>Data.png</b> — observed shot gathers, generated in ~11 s across 64 workers.</figcaption>
+      <figcaption><b>Data.png</b> — observed shot gathers, modelled in ~2.8 s across 50 workers.</figcaption>
     </figure>
 
-    <figure class="fig-wide">
+    <figure>
       <img src="assets/Gradient.jpg" alt="First gradient with respect to Vp" loading="lazy">
-      <figcaption><b>Gradient.png</b> — the first gradient w.r.t. Vp, returned by the Devito Tesseract's adjoint-state VJP and about to be chained back through the SIREN.</figcaption>
-    </figure>
-
-    <figure>
-      <img src="assets/InvertedVP.jpg" alt="True, initial and inverted velocity models" loading="lazy">
-      <figcaption><b>InvertedVPtmp.png</b> — true / random-initial / current model on one shared colorbar, refreshed live during the run.</figcaption>
-    </figure>
-
-    <figure>
-      <img src="assets/Loss.jpg" alt="Convergence curves" loading="lazy">
-      <figcaption><b>Losstmp.png</b> — data misfit and model error against epoch.</figcaption>
+      <figcaption><b>Gradient.png</b> — the first gradient w.r.t. Vp from the Devito Tesseract's adjoint-state VJP, about to be chained back through the SIREN.</figcaption>
     </figure>
 
     <figure>
       <img src="assets/GradTheta.jpg" alt="Per-layer gradient norms" loading="lazy">
-      <figcaption><b>GradThetatmp.png</b> — ‖dL/dθ‖ per SIREN layer and its history, the composed gradient after both VJPs.</figcaption>
-    </figure>
-
-    <figure>
-      <img src="assets/Waveform.jpg" alt="Observed versus modelled waveforms" loading="lazy">
-      <figcaption><b>Waveformtmp.png</b> — observed vs modelled wiggles and their residual, live.</figcaption>
+      <figcaption><b>GradTheta.png</b> — ‖dL/dθ‖ per SIREN layer and its history: the composed gradient, after both VJPs.</figcaption>
     </figure>
   </div>
 
-  <h3>What has and has not been verified</h3>
+  <h3>Where the time went</h3>
 
-  <div class="note good">
-    <span class="note-title">Verified at this scale</span>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Time</th><th>Share</th></tr></thead>
+      <tbody>
+        <tr><td>imports, setup, SIREN build, worker fork</td><td>10.5 s</td><td>0.0 %</td></tr>
+        <tr><td>FD engine build-up + observed data</td><td>2.8 s</td><td>0.0 %</td></tr>
+        <tr><td>first loss + gradient</td><td>13.5 s</td><td>0.0 %</td></tr>
+        <tr><td><b>inversion (Adam, 6000 epochs)</b></td><td><b>49,937 s</b></td><td><b>99.9 %</b></td></tr>
+        <tr><td>— objective (loss + gradient + VJP)</td><td>46,822 s</td><td>93.7 %</td></tr>
+        <tr><td>— callback (live figures)</td><td>1,724 s</td><td>3.4 %</td></tr>
+        <tr><td>— optimiser overhead</td><td>1,391 s</td><td>2.8 %</td></tr>
+        <tr><td>final gradient, modelling, figures, I/O</td><td>18.1 s</td><td>0.0 %</td></tr>
+        <tr><td><b>Total wall clock</b></td><td><b>49,987 s — 13 h 53 m 07 s</b></td><td>100 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    The wave solve dominates completely, as it should: 93.7 % of wall clock is inside the physics
+    Tesseract. The Tesseract boundary itself — serialising <code>theta</code> out and
+    <code>dL/dθ</code> back, 6000 times each way — does not appear in the budget.
+  </p>
+
+  <h3>Caveats worth stating</h3>
+
+  <div class="note">
+    <span class="note-title">This run's configuration</span>
     <p>
-      The pipeline starts and runs — 64 workers, one per shot; observed data in ~11 s; one
-      composed loss+gradient in ~50 s giving <code>loss 1.331e-05</code> and
-      <code>|dL/dθ| 8.93e-05</code>, over 198,401 weights against 132,821 grid unknowns (1.49×).
+      <strong>50 shots and 6000 epochs</strong>, not the 64 shots / 3000 epochs that
+      <code>make run</code> and the reference script use — and the starting model is a calibrated
+      random SIREN (gain 8.775, σ = 0.300 km/s) rather than a plain random draw. Everything else
+      is as documented above.
     </p>
   </div>
 
   <div class="note">
-    <span class="note-title">Verified on a cheaper grid</span>
+    <span class="note-title">It had largely plateaued</span>
     <p>
-      All 16 checks in <code>test_pipeline.py</code> on a decimated Marmousi used during
-      development: the composed gradient against finite differences to ~1%, the Devito adjoint
-      to 2e-5 – 4e-4 per cell, and the fully containerised <code>--served</code> path returning
-      an identical gradient. Those are properties of the code, not of the grid — but they have
-      not been re-run at full size, where <code>make test</code> costs a wave solve per check.
+      Over the final 500 epochs the misfit moved 7 % and the model error 0.58 %. The run was
+      stopped at its epoch budget, not at a convergence criterion — more epochs would buy little
+      at this frequency without multiscale continuation.
     </p>
   </div>
 
-  <div class="note warn">
-    <span class="note-title">Not verified — convergence</span>
+  <div class="note">
+    <span class="note-title">Correctness checks were run on a cheaper grid</span>
     <p>
-      No full 3000-epoch run has been completed. On the cheaper grid the misfit fell
-      monotonically while the model RMSE <em>rose</em> after a few iterations — cycle-skipping
-      from a random start, expected with no multiscale continuation, and exactly the regime the
-      reference script's 64 shots and thousands of epochs exist to escape.
-    </p>
-    <p>
-      Whether this configuration recovers Marmousi is an open question here; the reference
-      script's own results are the yardstick.
+      All 16 checks in <code>test_pipeline.py</code> pass on a decimated Marmousi used during
+      development: the composed gradient against finite differences to ~1 %, the Devito adjoint
+      to 2e-5 – 4e-4 per cell, and the fully containerised <code>--served</code> path returning an
+      identical gradient. Those are properties of the code, not of the grid — but they have not
+      been re-run at full size, where <code>make test</code> costs a wave solve per check.
     </p>
   </div>
 </section>
