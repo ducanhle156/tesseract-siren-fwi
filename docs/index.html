@@ -437,11 +437,6 @@ footer a{color:var(--fg-dim)}
       <figcaption><b>Waveform.png</b> — observed vs modelled wiggles and their residual at the final model.</figcaption>
     </figure>
 
-    <figure class="fig-wide">
-      <img src="assets/SirenInit.jpg" alt="True Marmousi velocity model beside the random SIREN initial model" loading="lazy">
-      <figcaption><b>SirenInit.png</b> — the true model and the random SIREN initialisation (random phase, gain 8.775, seed 0, σ = 0.300 km/s), at RMSE 1.0014 km/s.</figcaption>
-    </figure>
-
     <figure>
       <img src="assets/Data.jpg" alt="Observed shot gathers" loading="lazy">
       <figcaption><b>Data.png</b> — observed shot gathers, modelled in ~2.8 s across 50 workers.</figcaption>
@@ -589,7 +584,6 @@ tesseract teardown &lt;name&gt;      <span class="c-com"># names printed by serv
         <tr><td><code>Profiles.png</code></td><td>vertical Vp profiles at three distances</td></tr>
         <tr><td><code>Waveform.png</code></td><td>observed vs modelled waveforms</td></tr>
         <tr><td><code>Loss.png</code></td><td>convergence — data misfit + model error</td></tr>
-        <tr><td><code>GradTheta.png</code></td><td>dL/dθ per layer at the final model, and its history</td></tr>
         <tr><td><code>*tmp.png</code></td><td>live diagnostics, refreshed every <code>--fig-every</code></td></tr>
         <tr><td><code>snapshots.npy</code></td><td>movie frames</td></tr>
         <tr><td><code>inversion.mp4</code></td><td>those frames rendered — the animation above</td></tr>
