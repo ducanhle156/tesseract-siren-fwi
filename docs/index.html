@@ -233,7 +233,7 @@ footer a{color:var(--fg-dim)}
   <p class="sub">Forward along the top, vector–Jacobian products back along the bottom.</p>
 
   <div class="diagram">
-    <svg viewBox="0 0 720 250" width="720" height="250" role="img"
+    <svg viewBox="0 0 720 262" width="720" height="262" role="img"
          aria-label="theta flows into the siren-model Tesseract producing Vp, which flows into the devito-fwi Tesseract producing the loss. Gradients flow back the other way: JAX VJP and adjoint VJP.">
       <defs>
         <marker id="fw" markerWidth="9" markerHeight="9" refX="8" refY="3.2" orient="auto">
@@ -281,18 +281,20 @@ footer a{color:var(--fg-dim)}
       <!-- siren -> dL/dtheta -->
       <line x1="184" y1="152" x2="88"  y2="152" stroke="#a78bfa" stroke-width="1.6" marker-end="url(#bw)"/>
 
-      <text x="262" y="146" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">JAX VJP</text>
-      <text x="262" y="164" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">autodiff</text>
+      <!-- each VJP label sits directly under the box that computes it -->
+      <text x="262" y="182" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">JAX VJP</text>
+      <text x="262" y="197" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">autodiff</text>
 
-      <text x="494" y="146" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">adjoint VJP</text>
-      <text x="494" y="164" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">hand-written</text>
+      <text x="494" y="182" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="11" text-anchor="middle">adjoint VJP</text>
+      <text x="494" y="197" fill="#6b7690" font-family="ui-monospace,monospace" font-size="9.5" text-anchor="middle">hand-written</text>
 
+      <!-- each quantity sits above the arrow that carries it -->
       <text x="44"  y="156" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">dL/dθ</text>
       <text x="378" y="140" fill="#a78bfa" font-family="ui-monospace,monospace" font-size="12" text-anchor="middle">dL/dVp</text>
 
       <!-- chain rule -->
-      <line x1="44" y1="196" x2="676" y2="196" stroke="#232a3b" stroke-width="1"/>
-      <text x="360" y="222" fill="#9aa5bd" font-family="ui-monospace,monospace" font-size="13" text-anchor="middle">
+      <line x1="44" y1="216" x2="676" y2="216" stroke="#232a3b" stroke-width="1"/>
+      <text x="360" y="240" fill="#9aa5bd" font-family="ui-monospace,monospace" font-size="13" text-anchor="middle">
         dL/dθ  =  (dVp/dθ)ᵀ @ dL/dVp
       </text>
     </svg>
