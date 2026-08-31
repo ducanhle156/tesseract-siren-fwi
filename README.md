@@ -66,9 +66,18 @@ docs/               the project page
 
 ## Running it
 
-Needs `devito`, `jax`, `optax`, `equinox`, `pylops` and
-`tesseract-core[runtime]`. The folder is self-contained — copy it anywhere and
-run; every path resolves relative to the file, not the working directory.
+```bash
+git clone https://github.com/nhatminhtrange/tesseract-siren-fwi.git
+cd tesseract-siren-fwi
+
+conda create -n fwi python=3.11 && conda activate fwi
+pip install "devito==4.8.23" pylops scipy numpy matplotlib tqdm \
+            jax optax equinox "tesseract-core[runtime]" tesseract-jax
+```
+
+Everything else it needs — the Marmousi model and the vendored FWI engine — is
+already in the repo, and every path resolves relative to the file rather than
+the working directory, so it runs from anywhere.
 
 ```bash
 make bench        # time one loss+gradient (~1 min)
