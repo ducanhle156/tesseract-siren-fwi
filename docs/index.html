@@ -419,7 +419,7 @@ footer a{color:var(--fg-dim)}
 
     <figure>
       <img src="assets/Loss.jpg" alt="Data misfit and model error against epoch" loading="lazy">
-      <figcaption><b>Loss.png</b> — data misfit (left, log scale) and model error (right). <b>Both fall together</b>, which is the point: the misfit is not being reduced at the model's expense. The spike near epoch 2724 is a single bad Adam step — the misfit recovers in 2 epochs, the model error in 390.</figcaption>
+      <figcaption><b>Loss.png</b> — data misfit (left, log scale) and model error (right). <b>Both fall together</b>, which is the point: the misfit is not being reduced at the model's expense. The spike is not a single bad step: the gradient norm starts climbing at epoch 2694 and the misfit only breaks 17 epochs later, at 2711, peaking around 2716. The misfit recovers in ~140 epochs; the model error takes ~1800, and ends slightly better than before.</figcaption>
     </figure>
 
     <figure>
