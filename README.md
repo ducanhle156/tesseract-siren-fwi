@@ -22,6 +22,19 @@ solver turns that model into a data misfit. Gradients flow back through both,
 even though each half computes its own gradient in a completely different way
 and neither knows the other exists.
 
+## The problem
+
+FWI recovers the subsurface velocity field (equivalently, squared slowness)
+from recorded shot gathers by minimising the L2 misfit between simulated and
+observed traces; the forward map is the acoustic wave equation. The inversion
+is ill-posed and strongly non-convex, so the outcome hangs on the starting
+model, the frequency content of the data, and how the model is parameterised.
+The last axis is the one explored here: the unknown is not the velocity grid
+but the weights of a SIREN coordinate network — not for compression (the
+network carries 1.49× more weights than the grid has unknowns) but for its
+smooth sinusoidal inductive bias, which acts as an implicit regulariser and
+changes the conditioning of the problem.
+
 ## The result
 
 **Marmousi is recovered from a featureless random start** — no starting model,
@@ -35,17 +48,31 @@ no multiscale continuation. 6000 optimiser steps, about 14 hours.
 The data misfit and the model error fall together, which is what makes this a
 real result rather than a curve-fitting artefact.
 
-## Why split it in two
+## Why this workflow needs Tesseract
 
-The two halves genuinely cannot share a dependency stack: `devito` and the
-newer `jax` need different environments, and Devito's adjoint is not
-JAX-traceable, so `jax.grad` cannot cross the boundary on its own.
+Devito has no automatic differentiation. It is a DSL that compiles symbolic
+finite-difference stencils into optimised C, and its gradient comes from the
+hand-derived **adjoint-state method**: one forward solve that stores the
+wavefield, one adjoint solve driven backward in time by the receiver
+residual, and a time-accumulated correlation of the two fields. To `jax.grad`
+that compiled kernel is an opaque call with no derivative rule — JAX cannot
+trace through it. On top of that, the two halves genuinely cannot share a
+dependency stack: `devito` and the newer `jax` need different environments.
 
-[Tesseract](https://github.com/pasteurlabs/tesseract-core) makes that boundary
-explicit and typed. Each side keeps its own libraries and its own way of
-computing a gradient — JAX autodiff on one, a hand-written adjoint-state solve
-on the other — and the chain rule joins them across a process or container
+[Tesseract](https://github.com/pasteurlabs/tesseract-core) closes the loop.
+The Devito forward/adjoint pair sits behind typed `apply` and
+`vector_jacobian_product` endpoints, and `tesseract-jax` registers the pair
+as a JAX custom-VJP primitive — a derivative rule supplied for an otherwise
+opaque call. Each side keeps its own libraries and its own way of computing a
+gradient, and the chain rule joins them across a process or container
 boundary.
+
+One Adam epoch then runs like this: JAX evaluates the SIREN to produce the
+velocity field on the grid; the field crosses into the physics Tesseract,
+where Devito's forward solve yields the misfit; the backward pass calls the
+adjoint solve for `dL/dvp`; and JAX chains that gradient back through the
+SIREN by ordinary backpropagation, so Adam updates network weights it never
+knew were upstream of a wave equation.
 
 | | `siren_model/` | `devito_fwi/` |
 |---|---|---|
@@ -85,7 +112,11 @@ water included (pinned to a nominal 1.5 km/s, near-zero error); over the
 
 ## Verifying the composed gradient
 
-The claim that the chain rule survives the boundary is tested, not assumed:
+Nothing in this stack enforces gradient correctness automatically. A wrong
+adjoint still produces a plausible-looking descent curve — the loss goes
+down, the figures look reasonable, and the model is quietly converging to
+the wrong place. So the claim that the chain rule survives the boundary is
+tested, not assumed:
 
 - `make check-grad` perturbs `theta` along the gradient direction, re-runs the
   **whole** pipeline either side, and compares the finite-difference slope
@@ -112,6 +143,13 @@ The claim that the chain rule survives the boundary is tested, not assumed:
 - The correctness checks run at the **full 601 × 221, 64-shot problem**, so
   each Devito-side check costs a complete wave solve — the suite takes tens of
   minutes and, like the inversion, wants a large-memory machine (see below).
+- The adjoint is validated **against finite differences only** — Taylor-style
+  directional checks of each VJP and of the composition. There is no explicit
+  dot-product test that the adjoint operator is the transpose of the forward
+  operator.
+- The forward wavefield is **stored in full, not checkpointed** — that is
+  where the per-worker memory cost below comes from; checkpointing is the
+  standard mitigation and is future work.
 
 ## Layout
 
@@ -166,7 +204,9 @@ roughly 8 GB (the saved wavefield lives on the absorbing-boundary-padded
 grid), so the stock 64 workers want a ~0.5 TB machine. On anything smaller
 set `FWI_NPROCS` to something modest, e.g. `FWI_NPROCS=8 make bench`; it only
 changes the wall clock, and leave headroom — worker memory grows somewhat
-over repeated solves.
+over repeated solves. The first loss+gradient also pays Devito's JIT
+compilation of its C kernels; the persistent worker pool pays that once, so
+the first epoch is slower than steady state.
 
 Both halves also build as containers (`make build`), after which the same
 `workflow.py` talks to them over HTTP instead of in-process — the point of the
