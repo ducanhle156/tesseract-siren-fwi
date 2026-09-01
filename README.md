@@ -1,6 +1,11 @@
 # SIREN-FWI as two composed Tesseracts
 
-> 📄 **[See the project page](https://nhatminhtrange.github.io/tesseract-siren-fwi/)** — results, figures and the inversion movie.
+> 📄 **[See the project page](https://ducanhle156.github.io/tesseract-siren-fwi/)** — results, figures and the inversion movie.
+>
+> 🏁 Built for the [Tesseract Hackathon 2026](https://pasteurlabs.ai/tesseract-hackathon-2026/),
+> **Track 3 — Hybrid ML + Mechanistic Models**: a learned component (a SIREN
+> network) trained by backpropagating through a physics solver wrapped as a
+> Tesseract. Team: **Anh Le** and **Nhat Tran**.
 
 Seismic full-waveform inversion (FWI) recovers a subsurface velocity model from
 recorded waveforms. This project runs one, split across **two independent
@@ -67,7 +72,7 @@ docs/               the project page
 ## Running it
 
 ```bash
-git clone https://github.com/nhatminhtrange/tesseract-siren-fwi.git
+git clone https://github.com/ducanhle156/tesseract-siren-fwi.git
 cd tesseract-siren-fwi
 
 conda create -n fwi python=3.11 && conda activate fwi
@@ -94,7 +99,7 @@ Figures land in `results/` and refresh as the run proceeds.
 
 ## Credits
 
-The FWI engine is **not mine**. `devitofwi/` is
+The FWI engine is **not ours**. `devitofwi/` is
 [Devito-fwi](https://github.com/DIG-Kaust/Devito-fwi) by the **Deep Imaging
 Group at KAUST** (lead author Matteo Ravasi), MIT licensed and vendored here
 with its `LICENSE`. Its wave propagator and hand-written adjoint-state gradient
@@ -106,3 +111,8 @@ with its `LICENSE`. Its wave propagator and hand-written adjoint-state gradient
 
 Full attribution, licences and the one local fix to Devito-fwi are in
 [THIRD_PARTY.md](THIRD_PARTY.md).
+
+## License
+
+[Apache 2.0](LICENSE). Vendored third-party code keeps its original licences
+(MIT), listed in [THIRD_PARTY.md](THIRD_PARTY.md).
