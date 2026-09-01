@@ -33,12 +33,12 @@ help:
 	@echo 'clean       remove results/'
 
 # The reference script's defaults: 601x221, 64 shots, SIREN 256x4, omega_0 20,
-# adam lr 1.5e-4 with 50 warmup steps, 3000 epochs, and its figure throttles.
+# adam lr 1.5e-4 with 50 warmup steps, 6000 epochs, and its figure throttles.
 # One worker per shot; at ~3 min per loss+gradient this is a multi-day run, so
 # it is meant to be started detached (nohup / tmux).
 run:
 	$(PYTHON) workflow.py \
-		--maxiter 3000 --lr 1.5e-4 --warmup 50 \
+		--maxiter 6000 --lr 1.5e-4 --warmup 50 \
 		--fig-every 25 --wiggle-every 10 --snap-every 5
 
 bench:

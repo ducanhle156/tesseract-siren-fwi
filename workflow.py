@@ -37,7 +37,7 @@ Outputs (in ``--outdir``)
     code/              verbatim copy of the sources that produced the run
 
 The problem is the reference script's: Marmousi on 601 x 221 at 15 m, 64 shots,
-300 receivers, 8 Hz, SIREN 256x4 at omega_0 20, Adam at 1.5e-4 for 3000 epochs.
+300 receivers, 8 Hz, SIREN 256x4 at omega_0 20, Adam at 1.5e-4 for 6000 epochs.
 One loss+gradient is ~3 minutes on 64 cores, so a full run takes days - start
 it detached.
 
@@ -88,7 +88,7 @@ def build_parser():
     p = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('--maxiter', type=int, default=3000, help='Adam epochs')
+    p.add_argument('--maxiter', type=int, default=6000, help='Adam epochs')
     p.add_argument('--lr', type=float, default=1.5e-4,
                    help='Adam peak learning rate in weight space')
     p.add_argument('--warmup', type=int, default=50, help='Adam warmup steps')
