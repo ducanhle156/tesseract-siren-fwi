@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SIREN-FWI as two composed Tesseracts</title>
 <meta name="description" content="Full-waveform inversion split across two Tesseracts: a JAX SIREN parameterisation and a Devito adjoint-state solver, composed into one differentiable pipeline.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SIREN-FWI as two composed Tesseracts">
+<meta property="og:description" content="Marmousi recovered from a featureless random start — a JAX coordinate network and a Devito adjoint-state solver, differentiated end to end across a container boundary. Tesseract Hackathon 2026, Track 3.">
+<meta property="og:url" content="https://ducanhle156.github.io/tesseract-siren-fwi/">
+<meta property="og:image" content="https://ducanhle156.github.io/tesseract-siren-fwi/assets/inversion-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 :root{
   --bg:#0b0e14; --bg-2:#11151f; --panel:#141926; --line:#232a3b;
@@ -30,7 +37,9 @@ header{
     radial-gradient(800px 400px at 85% -20%, rgba(167,139,250,.11), transparent 60%),
     var(--bg-2);
 }
-.hero{padding:76px 0 60px}
+.hero{padding:64px 0 56px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+      gap:44px;align-items:center}
+@media (max-width:860px){.hero{grid-template-columns:1fr;gap:30px}}
 .eyebrow{
   font-family:var(--mono); font-size:12px; letter-spacing:.14em;
   text-transform:uppercase; color:var(--accent); margin:0 0 18px;
@@ -38,7 +47,19 @@ header{
 h1{
   margin:0 0 18px; font-size:clamp(30px,5vw,46px); line-height:1.12;
   letter-spacing:-.02em; font-weight:650;
+  background:linear-gradient(100deg,var(--fg) 55%,var(--accent) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
 }
+.hero-media{
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel);
+  box-shadow:0 18px 50px rgba(0,0,0,.45), 0 0 0 1px rgba(95,211,243,.06);
+}
+.hero-media video{display:block;width:100%;height:auto;background:#fff}
+.hero-media figcaption{
+  font-family:var(--mono);font-size:11px;color:var(--fg-mute);
+  padding:9px 13px;border-top:1px solid var(--line);
+}
+.badge-track{border-color:rgba(95,211,243,.45);color:var(--accent);background:rgba(95,211,243,.07)}
 .lede{font-size:clamp(16px,2.1vw,19px);color:var(--fg-dim);max-width:60ch;margin:0 0 28px}
 .lede strong{color:var(--fg);font-weight:600}
 .badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
@@ -112,7 +133,9 @@ td code{font-size:12.5px}
 
 /* ---------- cards ---------- */
 .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-bottom:22px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;
+      transition:border-color .18s, transform .18s}
+.card:hover{border-color:#39435c;transform:translateY(-2px)}
 .card h4{margin:0 0 8px;font-size:14px;color:var(--fg);font-weight:600}
 .card p{margin:0;font-size:13.5px;line-height:1.6}
 .stat{font-family:var(--mono);font-size:22px;color:var(--accent);margin:0 0 4px;font-weight:600}
@@ -156,7 +179,8 @@ footer a{color:var(--fg-dim)}
 
 <header>
   <div class="wrap hero">
-    <p class="eyebrow">Differentiable pipeline · Tesseract</p>
+  <div>
+    <p class="eyebrow">Tesseract Hackathon 2026 · Track 3 — Hybrid ML + Mechanistic Models</p>
     <h1>SIREN-FWI as two composed Tesseracts</h1>
     <p class="lede">
       Full-waveform inversion split at the boundary where the automatic-differentiation
@@ -172,12 +196,22 @@ footer a{color:var(--fg-dim)}
       <span class="badge">8 Hz Ricker</span>
       <span class="badge">SIREN 256×4 · ω₀ = 20</span>
       <span class="badge">198,401 weights</span>
-      <span class="badge">✓ Marmousi recovered from random</span>
+      <span class="badge badge-track">✓ Marmousi recovered from random</span>
     </div>
     <div class="cta">
       <a class="btn btn-primary" href="#results">Results</a>
       <a class="btn" href="#architecture">Architecture</a>
+      <a class="btn" href="https://github.com/ducanhle156/tesseract-siren-fwi">GitHub&nbsp;→</a>
     </div>
+  </div>
+  <figure class="hero-media">
+    <a href="#results" aria-label="Jump to the results section">
+      <video src="assets/inversion.mp4" autoplay loop muted playsinline
+             poster="assets/inversion-poster.jpg"
+             aria-label="The inverted velocity model evolving over 6000 Adam epochs"></video>
+    </a>
+    <figcaption>the inversion, live — 6000 epochs, random start → Marmousi</figcaption>
+  </figure>
   </div>
 </header>
 
@@ -561,10 +595,19 @@ $PY workflow.py --served http://127.0.0.1:PORT1 http://127.0.0.1:PORT2</code></p
 <!-- ================= CREDITS ================= -->
 <section id="credits">
   <h2>Credits</h2>
-  <p class="sub">The FWI engine is not mine.</p>
+  <p class="sub">Team, and the shoulders this stands on.</p>
 
   <p>
-    <code>devitofwi/</code> is
+    Built by <strong>Anh Le</strong>
+    (<a href="https://github.com/ducanhle156">@ducanhle156</a>) and
+    <strong>Nhat Tran</strong>
+    (<a href="https://github.com/nhatminhtrange">@nhatminhtrange</a>) for the
+    <a href="https://pasteurlabs.ai/tesseract-hackathon-2026/">Tesseract Hackathon 2026</a>,
+    Track 3 — Hybrid ML + Mechanistic Models.
+  </p>
+
+  <p>
+    The FWI engine is <strong>not ours</strong>: <code>devitofwi/</code> is
     <a href="https://github.com/DIG-Kaust/Devito-fwi">Devito-fwi</a> by the
     <strong>Deep Imaging Group at KAUST</strong> (lead author Matteo Ravasi), MIT licensed,
     vendored here with its <code>LICENSE</code>. Its Devito propagator and hand-written
