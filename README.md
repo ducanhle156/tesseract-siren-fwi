@@ -2,10 +2,13 @@
 
 > 📄 **[See the project page](https://ducanhle156.github.io/tesseract-siren-fwi/)** — results, figures and the inversion movie.
 >
+> 🗒️ **[Development log](https://github.com/ducanhle156/tesseract-siren-fwi-note)** — notes taken while building this.
+>
 > 🏁 Built for the [Tesseract Hackathon 2026](https://pasteurlabs.ai/tesseract-hackathon-2026/),
 > **Track 3 — Hybrid ML + Mechanistic Models**: a learned component (a SIREN
 > network) trained by backpropagating through a physics solver wrapped as a
-> Tesseract. Team: **Anh Le** and **Nhat Tran**.
+> Tesseract. Team: **Anh Le** and **Nhat Tran**. This repo is a fork of
+> [Nhat Tran's original repo](https://github.com/nhatminhtrange/tesseract-siren-fwi).
 
 Seismic full-waveform inversion (FWI) recovers a subsurface velocity model from
 recorded waveforms. This project runs one, split across **two independent
@@ -66,9 +69,51 @@ between them is a typed Tesseract boundary whose **composed gradient is
 verified by finite differences** — the part that is usually a fragile private
 lash-up is here the explicit, tested object.
 
-Known limit: there is no grid-parameterised FWI baseline under identical
-settings in this repo, so the benefit of the SIREN parameterisation rests on
-the prior art above, not on a controlled comparison here.
+## The experiment
+
+| | |
+|---|---|
+| Model | Marmousi, 601 × 221 at 15 m — 9.0 × 3.3 km |
+| Acquisition | 64 shots, 300 receivers, full surface coverage |
+| Source | 8 Hz Ricker, 6 s record at 2 ms |
+| SIREN | 256 wide × 4 hidden, ω₀ = 20 — 198,401 weights |
+| Velocity bounds | 1.4 – 5.8 km/s (sigmoid output; brackets Marmousi's 1.484 – 5.695) |
+| Optimiser | Adam, lr 1.5e-4, 50-step warmup + cosine decay, 6000 epochs |
+| Wall clock | 13 h 53 m; 93.7 % of it inside the physics Tesseract |
+
+Both error metrics are computed against the true Marmousi over the full grid,
+water included (pinned to a nominal 1.5 km/s, near-zero error); over the
+119,361 unpinned cells alone the final RMSE is 0.380 km/s.
+
+## Verifying the composed gradient
+
+The claim that the chain rule survives the boundary is tested, not assumed:
+
+- `make check-grad` perturbs `theta` along the gradient direction, re-runs the
+  **whole** pipeline either side, and compares the finite-difference slope
+  against the composed adjoint: rel. err **1.07e-2** against a 3 % tolerance.
+  It passes only if both VJPs are right *and* consistent with each other.
+- `test_pipeline.py` also checks each half alone: the SIREN VJP against finite
+  differences to 1 %, and the Devito adjoint against single-cell finite
+  differences to 5e-3.
+- The Devito gradient needs one deliberate fix to be correct — a factor of 2
+  from the squared-slowness chain rule missing upstream (see
+  [THIRD_PARTY.md](THIRD_PARTY.md)). The finite-difference check is what
+  catches it: with the upstream expression the adjoint is off by exactly 2×.
+
+## Limitations
+
+- **No grid-parameterised baseline** under identical settings, so the benefit
+  of the SIREN parameterisation rests on the prior art above, not on a
+  controlled comparison here.
+- The random start is a **calibrated** random SIREN (output gain bisected to
+  σ = 0.3 km/s), not a raw draw — a raw Sitzmann init collapses to a
+  near-constant half-space.
+- The run stopped at its **epoch budget**, not a convergence criterion, and
+  had largely plateaued over the final 500 epochs.
+- The correctness checks run on a **decimated grid** — they test the code,
+  which does not change with grid size, but were not re-run at 601 × 221,
+  where each check costs a full wave solve.
 
 ## Layout
 
@@ -94,9 +139,17 @@ git clone https://github.com/ducanhle156/tesseract-siren-fwi.git
 cd tesseract-siren-fwi
 
 conda create -n fwi python=3.11 && conda activate fwi
-pip install "devito==4.8.23" pylops scipy numpy matplotlib tqdm \
-            jax optax equinox "tesseract-core[runtime]" tesseract-jax
+pip install "devito==4.8.23" pylops scipy numpy matplotlib pytest tqdm \
+            "jax>=0.7,<0.8" optax equinox "tesseract-core[runtime]" tesseract-jax
 ```
+
+Two pins that matter, both learned by running this in a fresh environment:
+`matplotlib` and `pytest` are import-time dependencies of devito 4.8.23's
+bundled seismic examples — without them the forked workers die on first use.
+And `jax` must stay below 0.8 for **in-process** mode: newer jax's threading
+makes the fork()ed Devito workers die silently. Served/container mode has no
+such constraint — the two stacks never share a process, which is the point of
+the split.
 
 Everything else it needs — the Marmousi model and the vendored FWI engine — is
 already in the repo, and every path resolves relative to the file rather than
@@ -108,6 +161,10 @@ make check-grad   # finite-difference the composed gradient
 make test         # the 16 checks
 make run          # the full inversion — hours, start it detached
 ```
+
+By default the physics Tesseract forks **one worker per shot** — 64 processes.
+On a shared or memory-capped machine set `FWI_NPROCS` to something modest,
+e.g. `FWI_NPROCS=4 make bench`; it only changes the wall clock.
 
 Both halves also build as containers (`make build`), after which the same
 `workflow.py` talks to them over HTTP instead of in-process — the point of the
