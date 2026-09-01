@@ -223,6 +223,7 @@ footer a{color:var(--fg-dim)}
   <a href="#gradient">Gradient check</a>
   <a href="#containers">Containers</a>
   <a href="#notes">Notes</a>
+  <a href="#positioning">Positioning</a>
   <a href="#credits">Credits</a>
 </div></nav>
 
@@ -439,6 +440,14 @@ footer a{color:var(--fg-dim)}
     </div>
   </div>
 
+  <p>
+    Both error metrics are computed against the true Marmousi over the <strong>full
+    601 × 221 grid</strong> — including the water column, whose 13,460 cells are pinned
+    by the shared mask to a nominal 1.5 km/s and carry almost no error (0.0015 km/s RMSE
+    against the true water). Over the 119,361 unpinned cells alone the final RMSE is
+    <strong>0.380 km/s</strong>, ~5&thinsp;% higher than the whole-grid figure.
+  </p>
+
   <figure class="fig-video">
     <video src="assets/inversion.mp4" controls loop muted playsinline preload="metadata"
            poster="assets/inversion-poster.jpg" aria-label="The inverted velocity model evolving over 6000 Adam epochs"></video>
@@ -506,6 +515,12 @@ footer a{color:var(--fg-dim)}
       The <strong>correctness checks</strong> — 16 of them, including the
       <a href="#gradient">gradient check</a> — were run on a cheaper decimated grid, not at this
       size.
+    </p>
+    <p>
+      There is <strong>no grid-parameterised baseline</strong> under identical settings here:
+      the claim that the SIREN parameterisation is what enables recovery from a random start
+      rests on the prior art <a href="#positioning">below</a>, not on a controlled comparison
+      in this repository.
     </p>
   </div>
 
@@ -590,6 +605,44 @@ $PY workflow.py --served http://127.0.0.1:PORT1 http://127.0.0.1:PORT2</code></p
       forked workers die.</p>
     </div>
   </div>
+</section>
+
+<!-- ================= POSITIONING ================= -->
+<section id="positioning">
+  <h2>Positioning</h2>
+  <p class="sub">What is new here, what is not, and what comes next.</p>
+
+  <p>
+    Parameterising FWI with an implicit neural network is <strong>published prior art</strong>,
+    not something this project invented:
+    <a href="https://doi.org/10.1190/geo2020-0933.1">Zhu et&nbsp;al. (2022)</a> framed the
+    reparameterisation and its regularising effect;
+    <a href="https://doi.org/10.1029/2022JB025964">Sun et&nbsp;al. (2023)</a> introduced
+    implicit FWI with deep neural representations;
+    <a href="https://doi.org/10.1190/image2022-3746334.1">Zhang et&nbsp;al. (2022)</a> developed
+    the MLP/SIREN variant this follows; and
+    <a href="https://doi.org/10.1190/image2024-4089099.1">Nguyen et&nbsp;al. (2024)</a> took an
+    elastic version to field data on GPUs.
+  </p>
+
+  <p>
+    The contribution here is the <strong>engineering, not the method</strong>: a reproducible,
+    open pipeline in which the network half and the physics half live in genuinely incompatible
+    stacks, each computes its own gradient its own way, and the bridge between them is a typed
+    Tesseract boundary whose composed gradient is
+    <a href="#gradient">verified by finite differences</a> — the part that is usually a fragile,
+    private lash-up is here the explicit, tested object.
+  </p>
+
+  <h3>Next step: elastic</h3>
+  <p>
+    The natural extension is the elastic problem along the lines of Nguyen et&nbsp;al.: three
+    SIREN heads for <code>V<sub>P</sub></code>, <code>V<sub>S</sub></code> and density, an
+    elastic propagator with a multi-parameter adjoint behind the same Tesseract boundary, and
+    multi-GPU workers in place of the forked CPU pool. Nothing in the workflow changes shape —
+    <code>theta</code> in, a scalar misfit back — which is precisely the property the split was
+    chosen for.
+  </p>
 </section>
 
 <!-- ================= CREDITS ================= -->

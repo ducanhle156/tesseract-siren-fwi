@@ -52,6 +52,24 @@ boundary.
 | gradient | JAX autodiff | discrete adjoint-state |
 | stack | jax, equinox | devito, pylops, a C compiler |
 
+## What is new here — and what is not
+
+Parameterising FWI with an implicit neural network is **published prior art**
+([Zhu et al. 2022](https://doi.org/10.1190/geo2020-0933.1),
+[Sun et al. 2023](https://doi.org/10.1029/2022JB025964),
+[Zhang et al. 2022](https://doi.org/10.1190/image2022-3746334.1),
+[Nguyen et al. 2024](https://doi.org/10.1190/image2024-4089099.1)); this
+project claims no methodological novelty. The contribution is the
+engineering: a reproducible, open pipeline where the two halves live in
+incompatible stacks, each computes its gradient its own way, and the bridge
+between them is a typed Tesseract boundary whose **composed gradient is
+verified by finite differences** — the part that is usually a fragile private
+lash-up is here the explicit, tested object.
+
+Known limit: there is no grid-parameterised FWI baseline under identical
+settings in this repo, so the benefit of the SIREN parameterisation rests on
+the prior art above, not on a controlled comparison here.
+
 ## Layout
 
 ```
