@@ -109,9 +109,9 @@ The claim that the chain rule survives the boundary is tested, not assumed:
   near-constant half-space.
 - The run stopped at its **epoch budget**, not a convergence criterion, and
   had largely plateaued over the final 500 epochs.
-- The correctness checks run on a **decimated grid** — they test the code,
-  which does not change with grid size, but were not re-run at 601 × 221,
-  where each check costs a full wave solve.
+- The correctness checks run at the **full 601 × 221, 64-shot problem**, so
+  each Devito-side check costs a complete wave solve — the suite takes tens of
+  minutes and, like the inversion, wants a large-memory machine (see below).
 
 ## Layout
 
@@ -161,8 +161,12 @@ make run          # the full inversion — hours, start it detached
 ```
 
 By default the physics Tesseract forks **one worker per shot** — 64 processes.
-On a shared or memory-capped machine set `FWI_NPROCS` to something modest,
-e.g. `FWI_NPROCS=4 make bench`; it only changes the wall clock.
+Budget memory accordingly: at the full grid each worker's adjoint solve costs
+roughly 8 GB (the saved wavefield lives on the absorbing-boundary-padded
+grid), so the stock 64 workers want a ~0.5 TB machine. On anything smaller
+set `FWI_NPROCS` to something modest, e.g. `FWI_NPROCS=8 make bench`; it only
+changes the wall clock, and leave headroom — worker memory grows somewhat
+over repeated solves.
 
 Both halves also build as containers (`make build`), after which the same
 `workflow.py` talks to them over HTTP instead of in-process — the point of the
